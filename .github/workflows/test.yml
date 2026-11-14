@@ -1,0 +1,28 @@
+name: Test main.py
+
+on: [push, workflow_dispatch]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Run main.py (first run)
+        run: python main.py
+      - name: Check output and hash (first run)
+        run: |
+          ls -l output.png
+          python -c "import struct; d=open('output.png','rb').read(); print('PNG signature ok:', d[:8] == b'\x89PNG\r\n\x1a\n'); w,h=struct.unpack('>II', d[16:24]); print('dimensions:', w, 'x', h); print('size bytes:', len(d))"
+          python -c "import hashlib; print('sha256 run 1:', hashlib.sha256(open('output.png','rb').read()).hexdigest())"
+      - name: Run main.py again (determinism check)
+        run: |
+          python main.py
+          python -c "import hashlib; print('sha256 run 2:', hashlib.sha256(open('output.png','rb').read()).hexdigest())"
+      - name: Upload output image
+        uses: actions/upload-artifact@v4
+        with:
+          name: output
+          path: output.png
